@@ -86,6 +86,51 @@
   let gameResultRecorded = false;
 
   let shadowRoot = null;
+  let extensionInvalidated = false;
+  let mainIntervalId = null;
+
+  // Защита от ошибки "Extension context invalidated" при перезагрузке расширения в chrome://extensions/
+  function isContextValid() {
+    try {
+      return Boolean(typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function shutdownOrphanedScript() {
+    extensionInvalidated = true;
+    if (mainIntervalId) {
+      clearInterval(mainIntervalId);
+      mainIntervalId = null;
+    }
+    if (autoMoveTimer) {
+      clearTimeout(autoMoveTimer);
+      autoMoveTimer = null;
+    }
+    try {
+      if (domObserver) domObserver.disconnect();
+    } catch (e) {}
+  }
+
+  function safeSendMessage(payload, callback) {
+    if (extensionInvalidated || !isContextValid()) {
+      shutdownOrphanedScript();
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage(payload, (res) => {
+        try {
+          if (chrome.runtime.lastError) return;
+          if (callback) callback(res);
+        } catch (err) {
+          shutdownOrphanedScript();
+        }
+      });
+    } catch (err) {
+      shutdownOrphanedScript();
+    }
+  }
 
   function getShadow() {
     if (shadowRoot) return shadowRoot;
@@ -95,10 +140,12 @@
     document.documentElement.appendChild(host);
     shadowRoot = host.attachShadow({ mode: "closed" });
 
-    const linkEl = document.createElement("link");
-    linkEl.rel = "stylesheet";
-    linkEl.href = chrome.runtime.getURL("content/content.css");
-    shadowRoot.appendChild(linkEl);
+    if (isContextValid()) {
+      const linkEl = document.createElement("link");
+      linkEl.rel = "stylesheet";
+      linkEl.href = chrome.runtime.getURL("content/content.css");
+      shadowRoot.appendChild(linkEl);
+    }
 
     return shadowRoot;
   }
@@ -108,8 +155,13 @@
   }
 
   function saveSetting(obj) {
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set(obj);
+    if (extensionInvalidated || !isContextValid()) return;
+    try {
+      if (chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set(obj);
+      }
+    } catch (e) {
+      shutdownOrphanedScript();
     }
   }
 
@@ -147,63 +199,73 @@
   }
 
   function loadSettings() {
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(
-        [
-          "elo", "style", "showArrows", "showEvalBar", "uiTheme",
-          "arrowStyle", "arrowScale", "arrowOpacity", "enable3DPiecesShadow", "roflMode", "safeAntiBanGuard",
-          "autoMoveEnabled", "autoMoveDelayMs", "autoMoveJitterMs", "autoMoveTriggerRate",
-          "useAverageMoveSometimes", "averageMoveFrequency", "protectCriticalMoves", "autoClickMethod"
-        ],
-        (res) => {
-          if (res.elo) currentElo = Number(res.elo);
-          if (res.style) currentStyle = res.style;
-          if (typeof res.showArrows === "boolean") showArrows = res.showArrows;
-          if (typeof res.showEvalBar === "boolean") showEvalBar = res.showEvalBar;
-          if (res.uiTheme) uiTheme = res.uiTheme;
-          if (res.arrowStyle) arrowStyle = res.arrowStyle;
-          if (res.arrowScale) arrowScale = Number(res.arrowScale);
-          if (res.arrowOpacity) arrowOpacity = Number(res.arrowOpacity);
-          if (typeof res.enable3DPiecesShadow === "boolean") enable3DPiecesShadow = res.enable3DPiecesShadow;
-          if (typeof res.roflMode === "boolean") roflMode = res.roflMode;
-          if (typeof res.safeAntiBanGuard === "boolean") safeAntiBanGuard = res.safeAntiBanGuard;
+    if (!isContextValid()) return;
+    try {
+      if (chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(
+          [
+            "elo", "style", "showArrows", "showEvalBar", "uiTheme",
+            "arrowStyle", "arrowScale", "arrowOpacity", "enable3DPiecesShadow", "roflMode", "safeAntiBanGuard",
+            "autoMoveEnabled", "autoMoveDelayMs", "autoMoveJitterMs", "autoMoveTriggerRate",
+            "useAverageMoveSometimes", "averageMoveFrequency", "protectCriticalMoves", "autoClickMethod"
+          ],
+          (res) => {
+            if (!isContextValid() || !res) return;
+            if (res.elo) currentElo = Number(res.elo);
+            if (res.style) currentStyle = res.style;
+            if (typeof res.showArrows === "boolean") showArrows = res.showArrows;
+            if (typeof res.showEvalBar === "boolean") showEvalBar = res.showEvalBar;
+            if (res.uiTheme) uiTheme = res.uiTheme;
+            if (res.arrowStyle) arrowStyle = res.arrowStyle;
+            if (res.arrowScale) arrowScale = Number(res.arrowScale);
+            if (res.arrowOpacity) arrowOpacity = Number(res.arrowOpacity);
+            if (typeof res.enable3DPiecesShadow === "boolean") enable3DPiecesShadow = res.enable3DPiecesShadow;
+            if (typeof res.roflMode === "boolean") roflMode = res.roflMode;
+            if (typeof res.safeAntiBanGuard === "boolean") safeAntiBanGuard = res.safeAntiBanGuard;
 
-          if (typeof res.autoMoveEnabled === "boolean") autoMoveEnabled = res.autoMoveEnabled;
-          if (res.autoMoveDelayMs !== undefined) autoMoveDelayMs = Number(res.autoMoveDelayMs);
-          if (res.autoMoveJitterMs !== undefined) autoMoveJitterMs = Number(res.autoMoveJitterMs);
-          if (res.autoMoveTriggerRate !== undefined) autoMoveTriggerRate = Number(res.autoMoveTriggerRate);
-          if (typeof res.useAverageMoveSometimes === "boolean") useAverageMoveSometimes = res.useAverageMoveSometimes;
-          if (res.averageMoveFrequency !== undefined) averageMoveFrequency = Number(res.averageMoveFrequency);
-          if (typeof res.protectCriticalMoves === "boolean") protectCriticalMoves = res.protectCriticalMoves;
-          if (res.autoClickMethod) autoClickMethod = res.autoClickMethod;
+            if (typeof res.autoMoveEnabled === "boolean") autoMoveEnabled = res.autoMoveEnabled;
+            if (res.autoMoveDelayMs !== undefined) autoMoveDelayMs = Number(res.autoMoveDelayMs);
+            if (res.autoMoveJitterMs !== undefined) autoMoveJitterMs = Number(res.autoMoveJitterMs);
+            if (res.autoMoveTriggerRate !== undefined) autoMoveTriggerRate = Number(res.autoMoveTriggerRate);
+            if (typeof res.useAverageMoveSometimes === "boolean") useAverageMoveSometimes = res.useAverageMoveSometimes;
+            if (res.averageMoveFrequency !== undefined) averageMoveFrequency = Number(res.averageMoveFrequency);
+            if (typeof res.protectCriticalMoves === "boolean") protectCriticalMoves = res.protectCriticalMoves;
+            if (res.autoClickMethod) autoClickMethod = res.autoClickMethod;
 
-          applySafeBoardDepth();
+            applySafeBoardDepth();
+            updateUIValues();
+            forceRecalculate();
+          }
+        );
+
+        chrome.storage.onChanged.addListener((changes) => {
+          if (!isContextValid()) {
+            shutdownOrphanedScript();
+            return;
+          }
+          if (changes.elo) currentElo = Number(changes.elo.newValue);
+          if (changes.style) {
+            currentStyle = changes.style.newValue;
+            forceRecalculate();
+          }
+          if (changes.showArrows) showArrows = Boolean(changes.showArrows.newValue);
+          if (changes.showEvalBar) showEvalBar = Boolean(changes.showEvalBar.newValue);
+          if (changes.uiTheme) uiTheme = changes.uiTheme.newValue;
+          if (changes.arrowStyle) arrowStyle = changes.arrowStyle.newValue;
+          if (changes.arrowScale) arrowScale = Number(changes.arrowScale.newValue);
+          if (changes.arrowOpacity) arrowOpacity = Number(changes.arrowOpacity.newValue);
+          if (changes.enable3DPiecesShadow) {
+            enable3DPiecesShadow = Boolean(changes.enable3DPiecesShadow.newValue);
+            applySafeBoardDepth();
+          }
+          if (changes.roflMode) roflMode = Boolean(changes.roflMode.newValue);
+          if (changes.safeAntiBanGuard) safeAntiBanGuard = Boolean(changes.safeAntiBanGuard.newValue);
           updateUIValues();
-          forceRecalculate();
-        }
-      );
-
-      chrome.storage.onChanged.addListener((changes) => {
-        if (changes.elo) currentElo = Number(changes.elo.newValue);
-        if (changes.style) {
-          currentStyle = changes.style.newValue;
-          forceRecalculate();
-        }
-        if (changes.showArrows) showArrows = Boolean(changes.showArrows.newValue);
-        if (changes.showEvalBar) showEvalBar = Boolean(changes.showEvalBar.newValue);
-        if (changes.uiTheme) uiTheme = changes.uiTheme.newValue;
-        if (changes.arrowStyle) arrowStyle = changes.arrowStyle.newValue;
-        if (changes.arrowScale) arrowScale = Number(changes.arrowScale.newValue);
-        if (changes.arrowOpacity) arrowOpacity = Number(changes.arrowOpacity.newValue);
-        if (changes.enable3DPiecesShadow) {
-          enable3DPiecesShadow = Boolean(changes.enable3DPiecesShadow.newValue);
-          applySafeBoardDepth();
-        }
-        if (changes.roflMode) roflMode = Boolean(changes.roflMode.newValue);
-        if (changes.safeAntiBanGuard) safeAntiBanGuard = Boolean(changes.safeAntiBanGuard.newValue);
-        updateUIValues();
-        renderArrowsOverlay(captureBoardState(true), cachedMoves);
-      });
+          renderArrowsOverlay(captureBoardState(true), cachedMoves);
+        });
+      }
+    } catch (e) {
+      shutdownOrphanedScript();
     }
   }
 
@@ -882,7 +944,7 @@
 
     $("cc-train-good").addEventListener("click", () => {
       if (!cachedMoves.best || !cachedMoves.boardKey) return;
-      chrome.runtime.sendMessage(
+      safeSendMessage(
         { type: "TRAIN_MOVE_MANUAL", fenKey: cachedMoves.boardKey, uci: cachedMoves.best.uci, delta: 95 },
         (res) => {
           const btn = $("cc-train-good");
@@ -899,7 +961,7 @@
 
     $("cc-train-bad").addEventListener("click", () => {
       if (!cachedMoves.best || !cachedMoves.boardKey) return;
-      chrome.runtime.sendMessage(
+      safeSendMessage(
         { type: "TRAIN_MOVE_MANUAL", fenKey: cachedMoves.boardKey, uci: cachedMoves.best.uci, delta: -210 },
         (res) => {
           const btn = $("cc-train-bad");
@@ -915,7 +977,7 @@
     });
 
     $("cc-export-db").addEventListener("click", () => {
-      chrome.runtime.sendMessage({ type: "GET_MEMORY_STATS" }, (res) => {
+      safeSendMessage({ type: "GET_MEMORY_STATS" }, (res) => {
         const blob = new Blob([JSON.stringify(res?.experienceDB || {}, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -926,14 +988,14 @@
     });
 
     $("cc-clear-db").addEventListener("click", () => {
-      chrome.runtime.sendMessage({ type: "CLEAR_MEMORY" }, () => {
+      safeSendMessage({ type: "CLEAR_MEMORY" }, () => {
         $("cc-memory-stat").textContent = "0 ПОЗ.";
         $("cc-misc-db-summary").textContent = "Выучено позиций в памяти: 0";
       });
     });
 
     $("cc-open-studio-btn").addEventListener("click", () => {
-      if (chrome?.runtime?.getURL) {
+      if (isContextValid() && chrome?.runtime?.getURL) {
         window.open(chrome.runtime.getURL("options/options.html"), "_blank");
       }
     });
@@ -966,7 +1028,7 @@
   }
 
   function scheduleAutoMoveIfNeeded() {
-    if (!autoMoveEnabled) return;
+    if (!autoMoveEnabled || extensionInvalidated) return;
     if (isExecutingMove || Date.now() < moveCooldownUntil) return;
     if (autoMoveTimer) return;
 
@@ -1027,7 +1089,7 @@
 
     autoMoveTimer = setTimeout(() => {
       autoMoveTimer = null;
-      if (!autoMoveEnabled) return;
+      if (!autoMoveEnabled || extensionInvalidated) return;
 
       const fresh = captureBoardState(true);
       if (!fresh || fresh.actualTurn !== fresh.myColor || fresh.boardKey !== expectedBoardKey) {
@@ -1289,7 +1351,6 @@
     return null;
   }
 
-  // ИСПРАВЛЕНО: Сброс детектора и истории происходит ТОЛЬКО при смене URL партии или переходе к новой стартовой расстановке!
   function updateCastlingEpAndRealHistory(grid, boardPart, myColor) {
     const startFenBoard = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
     const isNewUrl = location.pathname !== lastPathname;
@@ -1770,7 +1831,7 @@
     if (whiteWon) outcome = myColor === "w" ? "win" : "loss";
     if (blackWon) outcome = myColor === "b" ? "win" : "loss";
 
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       { type: "RECORD_GAME_RESULT", history: sessionMoveHistory, result: outcome },
       (res) => {
         if (res && res.ok) {
@@ -1785,18 +1846,25 @@
     );
   }
 
-  // ИСПРАВЛЕНО: Извлекаем чистый 8-символьный ID комнаты напрямую из URL партии (без ложных ссылок из .game__meta)
+  // Извлекаем 8-символьный ID комнаты из любого сегмента URL (включая /game/eLd11gh7 и /eLd11gh7)
   function getSharedGameRoomId() {
-    const reservedWords = ["analysis", "training", "practice", "streamer", "settings", "timeline", "team"];
-    const rawPath = location.pathname.replace(/^\/+/, "").split("/")[0] || "";
-    if (reservedWords.includes(rawPath.toLowerCase())) return null;
-    if (/^[a-zA-Z0-9]{8,12}$/.test(rawPath)) {
-      return rawPath.slice(0, 8);
+    const reservedWords = [
+      "analysis", "training", "practice", "streamer", "settings",
+      "timeline", "team", "game", "tournament", "swiss", "study", "broadcast"
+    ];
+    const parts = location.pathname.replace(/^\/+/, "").split("/");
+    for (const part of parts) {
+      const clean = (part || "").trim();
+      if (!clean || reservedWords.includes(clean.toLowerCase())) continue;
+      if (/^[a-zA-Z0-9]{8,12}$/.test(clean)) {
+        return clean.slice(0, 8);
+      }
     }
     return null;
   }
 
   function checkOpponentExtensionBeacon(myColor, forceNow = false) {
+    if (extensionInvalidated || !isContextValid()) return;
     const now = Date.now();
     if (!forceNow && now - lastBeaconCheckTime < 4000) return;
     lastBeaconCheckTime = now;
@@ -1805,7 +1873,7 @@
     const banner = $("cc-peer-detector-banner");
     if (!roomId || !banner) return;
 
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       {
         type: "CHECK_PEER_BEACON",
         roomId,
@@ -1950,6 +2018,11 @@
   }
 
   function runCycle(forceByButton = false) {
+    if (extensionInvalidated || !isContextValid()) {
+      shutdownOrphanedScript();
+      return;
+    }
+
     ensurePanel();
 
     if (!forceByButton && (isExecutingMove || Date.now() < moveCooldownUntil)) {
@@ -2000,7 +2073,7 @@
     const sideText = state.sideToAnalyze === "w" ? "ХОД БЕЛЫХ ⚪" : "ХОД ЧЕРНЫХ ⚫";
     if ($("cc-turn-indicator")) $("cc-turn-indicator").textContent = sideText;
 
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       { type: "ANALYZE_POSITION", fen: state.fen, elo: currentElo, style: currentStyle, pass: "fast" },
       (fastRes) => {
         if (myReqId !== analysisRequestId || !fastRes || fastRes.error) return;
@@ -2014,7 +2087,7 @@
         if (deepBadge) deepBadge.style.display = "inline-block";
         const firstBestUci = fastRes.best ? fastRes.best.uci : "";
 
-        chrome.runtime.sendMessage(
+        safeSendMessage(
           { type: "ANALYZE_POSITION", fen: state.fen, elo: currentElo, style: currentStyle, pass: "deep" },
           (deepRes) => {
             if (myReqId !== analysisRequestId) return;
@@ -2033,7 +2106,7 @@
 
   let rafPending = false;
   function triggerDebouncedCycle() {
-    if (rafPending || isExecutingMove || Date.now() < moveCooldownUntil) return;
+    if (extensionInvalidated || rafPending || isExecutingMove || Date.now() < moveCooldownUntil) return;
     rafPending = true;
     requestAnimationFrame(() => {
       rafPending = false;
@@ -2047,6 +2120,7 @@
   const domObserver = new MutationObserver(triggerDebouncedCycle);
 
   function ensureObserversAttached() {
+    if (extensionInvalidated || !isContextValid()) return;
     const cgBoard = document.querySelector(".main-board cg-board") || document.querySelector("cg-board");
     if (cgBoard && cgBoard !== observedBoardNode) {
       observedBoardNode = cgBoard;
@@ -2064,7 +2138,11 @@
   loadSettings();
   ensureObserversAttached();
 
-  setInterval(() => {
+  mainIntervalId = setInterval(() => {
+    if (extensionInvalidated || !isContextValid()) {
+      shutdownOrphanedScript();
+      return;
+    }
     ensureObserversAttached();
     if (!isExecutingMove && Date.now() >= moveCooldownUntil) {
       runCycle(false);
@@ -2072,6 +2150,7 @@
   }, 800);
 
   const syncVisualPosition = () => {
+    if (extensionInvalidated || !isContextValid()) return;
     const state = captureBoardState(true);
     if (state && cachedMoves.best) {
       renderEvalBar(state, cachedMoves.best.whitePerspectiveEval || cachedMoves.best.evalPawns);
