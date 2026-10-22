@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>ChessCoach REWORK</title>
+  <style>
+    @keyframes cc-wave {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      width: 330px;
+      margin: 0;
+      padding: 15px;
+      background: radial-gradient(circle at top right, #192236, #0b0d14 70%);
+      color: #f0f4f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12.5px;
+      position: relative;
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #00f5d4, #00bbf9, #7b2cbf, #ff2a85, #00f5d4);
+      background-size: 300% 100%;
+      animation: cc-wave 6s ease infinite;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .brand {
+      font-weight: 900;
+      font-size: 13.5px;
+      letter-spacing: 0.5px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00f5d4;
+      box-shadow: 0 0 8px #00f5d4;
+    }
+    .badge {
+      background: linear-gradient(135deg, #00f5d4, #00bbf9);
+      color: #080a0f;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 7px;
+      border-radius: 5px;
+    }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 11px;
+      padding: 10px 12px;
+      margin-bottom: 9px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+    .label-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-weight: 700;
+      font-size: 11.5px;
+    }
+    .label-line strong {
+      color: #00f5d4;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #00f5d4;
+      cursor: pointer;
+    }
+    select {
+      width: 100%;
+      background: #0d1017;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 7px;
+      padding: 6px 8px;
+      margin-top: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      outline: none;
+    }
+    option {
+      background: #0d1017;
+      color: #fff;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 6px 0;
+      font-size: 12px;
+    }
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #00f5d4;
+      cursor: pointer;
+    }
+    .mem-stats {
+      font-size: 11.5px;
+      color: #00f5d4;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+    }
+    button {
+      flex: 1;
+      padding: 8px;
+      border-radius: 7px;
+      font-weight: 800;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-studio {
+      background: linear-gradient(135deg, #00f5d4, #00bbf9);
+      color: #07090e;
+      border: none;
+    }
+    .btn-clear {
+      background: rgba(255, 42, 133, 0.16);
+      color: #ff4d94;
+      border: 1px solid rgba(255, 42, 133, 0.45);
+    }
+    button:hover {
+      filter: brightness(1.12);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <span class="dot"></span>
+      <span>CHESSCOACH</span>
+    </div>
+    <span class="badge">REWORK HUD</span>
+  </div>
+
+  <div class="glass-card">
+    <div class="label-line">
+      <span>МОЩНОСТЬ ДВИЖКА:</span>
+      <strong id="popup-elo-val">2000 ELO</strong>
+    </div>
+    <input type="range" id="popup-elo" min="400" max="3000" step="100" value="2000">
+  </div>
+
+  <div class="glass-card">
+    <div style="font-weight:700; font-size:11.5px;">ПРОФИЛЬ ЧЕМПИОНА (11 СТИЛЕЙ):</div>
+    <select id="popup-style">
+      <option value="mogging">⚡ Моггинг (Доминирование + Радар)</option>
+      <option value="tal">✦ Михаил Таль (Жертвы и атака)</option>
+      <option value="alphazero">🧠 AlphaZero (Нейросеть: зажим и жертвы)</option>
+      <option value="morphy">🎭 Пол Морфи (Гений темпа и атаки)</option>
+      <option value="hikaru">🚀 Хикару Накамура (Король пульки)</option>
+      <option value="kasparov">▲ Гарри Каспаров (Динамика и прессинг)</option>
+      <option value="fischer">◈ Бобби Фишер (Точность и два слона)</option>
+      <option value="carlsen">❖ Магнус Карлсен (Технический зажим)</option>
+      <option value="solid">🛡 Анатолий Карпов (Профилактика)</option>
+      <option value="botvinnik">🏛 Михаил Ботвинник (Логика центра)</option>
+      <option value="balanced">⚙ Stockfish 3000 (Чистый расчет)</option>
+    </select>
+  </div>
+
+  <div class="glass-card">
+    <div style="font-weight:700; font-size:11.5px;">ТЕМА МЕНЮ И ВИД СТРЕЛОК:</div>
+    <select id="popup-theme">
+      <option value="minimal">⚪ Pure Minimal (Чистый минимализм)</option>
+      <option value="cyberpunk">🌌 Liquid Cyan Wave (Неоновая волна)</option>
+      <option value="aurora">🌌 Aurora 3D Glass (Северное сияние)</option>
+      <option value="hologram">🔮 Hologram Violet (Голограмма)</option>
+      <option value="crimson">🔥 Crimson Rose (Агрессивный рубин)</option>
+      <option value="gold">👑 Royal Gold (Королевское золото)</option>
+      <option value="matrix">🧪 Matrix Toxic (Кибер-Матрица)</option>
+      <option value="titanium">❄️ Vision Pro Titanium (Матовый титан)</option>
+      <option value="obsidian">🌑 Obsidian Stealth (Темный обсидиан)</option>
+    </select>
+
+    <select id="popup-arrow-style" style="margin-top:7px;">
+      <option value="curved_neon">🌈 Плавная дуга с потоком</option>
+      <option value="tube_3d">🧊 3D Объемная трубка с тенью</option>
+      <option value="plasma">⚡ Плазменная молния-зигзаг</option>
+      <option value="sniper_3d">🎯 3D Снайперский радар-прицел</option>
+      <option value="dna_wave">🧬 Двойная кибер-волна ДНК</option>
+      <option value="chroma_rgb">🌈 Chroma RGB Перелив</option>
+      <option value="laser">⚡ Прямой кибер-лазер</option>
+      <option value="classic">♟️ Классическая прямая</option>
+      <option value="dotted">✨ Тактический пунктир</option>
+    </select>
+  </div>
+
+  <div class="glass-card">
+    <div class="checkbox-row">
+      <label for="popup-arrows">ESP Стрелки и маркеры</label>
+      <input type="checkbox" id="popup-arrows" checked>
+    </div>
+    <div class="checkbox-row">
+      <label for="popup-evalbar">Боковая шкала оценки (Eval Bar)</label>
+      <input type="checkbox" id="popup-evalbar" checked>
+    </div>
+  </div>
+
+  <div class="glass-card" style="margin-bottom:0;">
+    <div class="mem-stats" id="popup-mem-info">❖ База опыта: загрузка...</div>
+    <div class="btn-row">
+      <button class="btn-studio" id="popup-open-studio">🎨 Открыть Студию</button>
+      <button class="btn-clear" id="popup-clear-mem">🗑 Сброс БД</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
