@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "ChessCoach REWORK — Vision HUD & Tactical Core",
+  "version": "13.0.0",
+  "description": "Интерактивный шахматный тренер и анализатор для Lichess: быстрый локальный движок, AutoMove v2, квадратные маркеры, 16 стилей визуализации и Vision Glass HUD.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "*://lichess.org/*",
+    "*://*.lichess.org/*",
+    "*://ntfy.sh/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://lichess.org/*",
+        "*://*.lichess.org/*"
+      ],
+      "js": [
+        "content/main-bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "*://lichess.org/*",
+        "*://*.lichess.org/*"
+      ],
+      "js": [
+        "lib/openings.js",
+        "lib/explainer.js",
+        "lib/phonk-fx.js",
+        "content/content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/*",
+        "content/*"
+      ],
+      "matches": [
+        "*://lichess.org/*",
+        "*://*.lichess.org/*"
+      ]
+    }
+  ]
+}
