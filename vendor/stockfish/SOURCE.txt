@@ -1,0 +1,17 @@
+Stockfish.js 19.0.1
+
+Upstream release:
+https://github.com/nmrugg/stockfish.js/releases/tag/v19.0.1
+
+Corresponding source:
+https://github.com/nmrugg/stockfish.js/tree/v19.0.1
+https://github.com/official-stockfish/Stockfish/tree/sf_19
+
+Packaged unmodified release assets:
+- stockfish-19-single.js
+  SHA-256: 8071dee87312f74805a859de933e1a1ef465579ab1a51fbd597388cdce9d444d
+- stockfish-19-single.wasm
+  SHA-256: 991bede2f253ebb08ff01fcc48270f4b9c8e66b12d5bd5f8d6f52eb3e3b3a740
+
+License: GNU GPL version 3. See COPYING.txt in this directory.
+The WASM artifact contains the full Stockfish 19 NNUE network.

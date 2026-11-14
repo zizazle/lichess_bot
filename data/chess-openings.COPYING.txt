@@ -1,0 +1,7 @@
+The generated eco-book.js data is derived from lichess-org/chess-openings.
+
+Source: https://github.com/lichess-org/chess-openings
+License: CC0 1.0 Universal
+License text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The source project dedicates the opening data to the public domain under CC0-1.0.
