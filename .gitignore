@@ -1,0 +1,59 @@
+# Separate Android repository; keep its own Git history intact.
+/ChessCoach-Android/
+
+# Generated packages, build output, and test reports.
+/dist/
+/build/
+/artifacts/
+*.crx
+*.xpi
+*.apk
+*.aab
+*.idsig
+coverage/
+test-results/
+playwright-report/
+
+# Dependency caches, logs, and temporary editor files.
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.cache/
+*.tsbuildinfo
+*.log
+logs/
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+
+# Credentials and private configuration exports, not source templates.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.chess
+*.chess.json
+*.local.json
+credentials.json
+secrets.json
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+keystore.properties
+signing.properties
+
+# Generated Agent Manager state only; retain .kilo source configuration.
+/.kilo/worktrees/
+/.kilo/agent-manager.json
+
+# Operating system files.
+.DS_Store
+Thumbs.db
+desktop.ini

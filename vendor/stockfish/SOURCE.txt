@@ -1,0 +1,49 @@
+Stockfish.js 19.0.1
+
+Upstream release:
+https://github.com/nmrugg/stockfish.js/releases/tag/v19.0.1
+
+Corresponding source:
+https://github.com/nmrugg/stockfish.js/tree/v19.0.1
+https://github.com/official-stockfish/Stockfish/tree/sf_19
+
+The pinned stockfish.js checkout includes the C++ engine, src/emscripten
+glue, and build.js. The Stockfish sf_19 link is the base engine reference,
+not a substitute for the stockfish.js source and build scripts.
+
+Build procedure from the v19.0.1 upstream README:
+- Install and activate Emscripten 6.0.9 and make Node.js available.
+- In the pinned stockfish.js checkout, run ./build.js --all.
+- Outputs are written to src/; use the single-threaded full JS/WASM pair
+  and rename stockfish-19-asm.js to lib/stockfish-local.js for fallback.
+https://github.com/nmrugg/stockfish.js/blob/v19.0.1/build.js
+https://github.com/nmrugg/stockfish.js/blob/v19.0.1/README.md
+
+Packaged unmodified release assets (paths relative to this directory):
+- stockfish-19-single.js
+  SHA-256: 8071dee87312f74805a859de933e1a1ef465579ab1a51fbd597388cdce9d444d
+- stockfish-19-single.wasm
+  SHA-256: 991bede2f253ebb08ff01fcc48270f4b9c8e66b12d5bd5f8d6f52eb3e3b3a740
+- ../../lib/stockfish-local.js
+  Upstream artifact: stockfish-19-asm.js (renamed ASM fallback).
+https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19-asm.js
+
+These SHA-256 values are retained provenance records, not verification
+of a newly built package, its signature, or a byte-identical rebuild.
+
+NNUE source inputs for the full and lite upstream variants:
+- Full: nn-1a298aa575a0.nnue
+  https://tests.stockfishchess.org/nns?network_name=nn-1a298aa575a0
+- Lite: nn-61e7af4bb97d.nnue
+  https://tests.stockfishchess.org/nns?network_name=nn-61e7af4bb97d
+
+Copyright notice from the bundled artifact:
+Stockfish.js 19 (c) 2026, Chess.com, LLC
+Based on Stockfish (c) T. Romstad, M. Costalba, J. Kiiski,
+G. Linscott and other contributors.
+Nets by Chris Bao (sscg13).
+
+License: GNU GPL version 3 or later. See COPYING.txt in this directory.
+The WASM artifact contains the full Stockfish 19 NNUE network.
+Distributors must preserve notices and provide the corresponding source,
+build scripts, and network inputs by an allowed GPL section 6 method.
